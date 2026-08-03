@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16342A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>आपसी हिसाब</title>
+<meta name="apple-mobile-web-app-title" content="आपसी हिसाब">
+<meta name="description" content="Split group expenses and contributions with आपसी हिसाब — works fully offline.">
+<style>
+  :root{
+    --paper:#EEF0E4; --paper2:#E6E9DA; --ink:#1F2B22; --deep:#16342A;
+    --brand:#2D6A4F; --brandDark:#204F3C; --gold:#C9A227; --brick:#A64B2A; --line:#C7CBB6; --faint:#8B9184;
+    --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px); --safe-right: env(safe-area-inset-right, 0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    -webkit-text-size-adjust:100%; overflow-x:hidden;}
+  body{padding-left:var(--safe-left);padding-right:var(--safe-right);}
+  input,select,textarea,button{font-size:16px;font-family:inherit;}
+  input,select{width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--line);
+    background:#fff;outline:none;box-sizing:border-box;}
+  input:focus,select:focus{outline:2px solid var(--brand);outline-offset:1px;}
+  button{cursor:pointer;border:none;}
+  .mono{font-family:'SF Mono',Consolas,'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .serif{font-family:Georgia,'Times New Roman',serif;}
+  .btn-primary{background:var(--brand);color:var(--paper);border-radius:12px;padding:12px;font-weight:600;width:100%;}
+  .btn-primary:disabled{opacity:.4;}
+  .btn-ghost{background:var(--paper2);color:var(--ink);border-radius:12px;padding:10px 14px;font-weight:500;}
+  html,body{ color-scheme: light; }
+  input,select{ color-scheme: light; color: var(--ink); }
+  .note-texture{
+    background-image:
+      repeating-linear-gradient(115deg, rgba(201,162,39,0.08) 0px, rgba(201,162,39,0.08) 1px, transparent 1px, transparent 10px),
+      repeating-linear-gradient(25deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 10px);
+  }
+  .coin-field{
+    background-image:
+      radial-gradient(circle at 12% 20%, rgba(201,162,39,0.10) 0%, transparent 42%),
+      radial-gradient(circle at 88% 78%, rgba(45,106,79,0.10) 0%, transparent 46%);
+  }
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--brandDark);font-weight:700;margin-bottom:7px;}
+  .card{background:#fff;border-radius:16px;overflow:hidden;}
+  .row{padding:14px 16px;border-bottom:1px solid var(--line);}
+  .row:last-child{border-bottom:none;}
+  .hdr{background:var(--deep);color:var(--paper);padding:calc(22px + var(--safe-top)) 18px 18px;}
+  .tabbar{display:flex;gap:4px;padding:10px 16px;background:var(--paper);position:sticky;top:0;border-bottom:1px solid var(--line);}
+  .tab{flex:1;text-align:center;padding:10px;border-radius:10px;background:transparent;color:var(--ink);font-weight:600;font-size:14px;}
+  .tab.active{background:var(--brand);color:var(--paper);}
+  .container{max-width:640px;margin:0 auto;padding:0 16px calc(90px + var(--safe-bottom));}
+  .center-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;padding-top:calc(24px + var(--safe-top));padding-bottom:calc(24px + var(--safe-bottom));background:var(--deep);}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30;overflow-y:auto;
+    -webkit-overflow-scrolling:touch; display:flex;justify-content:center;
+    padding:calc(24px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));}
+  .modal-panel{background:var(--paper);border-radius:16px;padding:20px;width:100%;max-width:440px;margin-bottom:60px;}
+  .pill{border-radius:999px;padding:6px 12px;font-size:11px;font-weight:600;letter-spacing:.03em;}
+  .toggle-row{display:flex;gap:8px;margin-bottom:8px;}
+  .toggle-btn{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:500;font-size:14px;}
+  .toggle-btn.active{background:var(--brand);color:var(--paper);border-color:var(--brand);}
+  .faint{color:var(--faint);}
+  .toast{position:fixed;bottom:calc(20px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:var(--deep);color:var(--paper);
+    padding:10px 18px;border-radius:999px;font-size:14px;z-index:50;}
+  table{width:100%;font-size:14px;border-collapse:collapse;}
+  th{text-align:left;padding:10px 12px;font-size:10px;text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);}
+  td{padding:10px 12px;border-bottom:1px solid var(--line);}
+  tr:last-child td{border-bottom:none;}
+  pre{white-space:pre-wrap;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;font-size:12px;overflow-x:auto;}
+  a.wa-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#0b3d1f;
+    border-radius:12px;padding:12px;font-weight:700;text-decoration:none;flex:1;}
+  ::selection{background:var(--gold);}
+  #installBanner{position:sticky;top:0;z-index:40;background:var(--gold);color:var(--deep);
+    padding:10px calc(14px + var(--safe-left)) 10px calc(14px + var(--safe-right));
+    padding-top:calc(10px + var(--safe-top));
+    font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  #installBanner button{border-radius:8px;font-weight:700;padding:6px 12px;font-size:12px;white-space:nowrap;}
+  #installBanner .ib-install{background:var(--deep);color:var(--paper);}
+  #installBanner .ib-dismiss{background:transparent;color:var(--deep);opacity:.7;padding:6px;}
+</style>
+</head>
+<body>
+<div id="installBanner" style="display:none;"></div>
+<div id="root"></div>
+<script>
+/* ===================== Storage (localStorage — fully offline, per device) ===================== */
+const GROUP_PREFIX = "ledger_group_";
+const IDENTITY_PREFIX = "ledger_identity_";
+const load = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } };
+const save = (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } };
+const groupKey = (id) => GROUP_PREFIX + id;
+const identityKey = (id) => IDENTITY_PREFIX + id;
+
+function listGroups(){
+  const out = [];
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(!k || !k.startsWith(GROUP_PREFIX)) continue;
+      const id = k.slice(GROUP_PREFIX.length);
+      const g = migrateGroup(load(k));
+      if(!g) continue;
+      const idn = load(identityKey(id));
+      const me = idn ? (g.members||[]).find(m=>m.id===idn.memberId) : null;
+      const totals = computeTotals(g);
+      out.push({ id, groupName: g.groupName, currency: g.currency, memberCount: (g.members||[]).length,
+        pool: totals.totalPool, updatedAt: g.updatedAt||0, youAreIn: !!me, yourName: me ? me.name : null,
+        isAdminHere: !!(me && g.adminId===me.id) });
+    }
+  }catch(e){}
+  out.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+  return out;
+}
+function saveGroup(){ if(group && group.id) save(groupKey(group.id), group); }
+function setIdentity(idObj){ identity = idObj; if(group && group.id) save(identityKey(group.id), idObj); }
+function loadActiveGroup(id){
+  const raw = load(groupKey(id));
+  group = migrateGroup(raw);
+  if(group) group.id = id;
+  identity = load(identityKey(id));
+}
+function goToGroupsList(){
+  activeGroupId = null; group = null; identity = null; showCreateForm = false;
+  render();
+}
+
+const CATEGORIES = [
+  {id:"food",label:"Food & Dining",emoji:"🍽️"},{id:"groceries",label:"Groceries",emoji:"🛒"},
+  {id:"transport",label:"Transport",emoji:"🚕"},{id:"accommodation",label:"Accommodation",emoji:"🏠"},
+  {id:"travel",label:"Travel",emoji:"✈️"},{id:"utilities",label:"Utilities",emoji:"💡"},
+  {id:"entertainment",label:"Entertainment",emoji:"🎬"},{id:"shopping",label:"Shopping",emoji:"🛍️"},
+  {id:"medical",label:"Medical",emoji:"💊"},{id:"other",label:"Other",emoji:"🧾"}
+];
+const CAT = Object.fromEntries(CATEGORIES.map(c=>[c.id,c]));
+const uid = () => Math.random().toString(36).slice(2,9);
+const fmt = (n,cur) => cur + Number(n||0).toFixed(2).replace(/\.00$/,"");
+
+const COLORS = { paper:"#EEF0E4", ink:"#1F2B22", deep:"#16342A", brand:"#2D6A4F", gold:"#C9A227", brick:"#A64B2A", line:"#C7CBB6", faint:"#8B9184" };
+let currentReportCanvas = null;
+
+let activeGroupId = null;
+let group = null;
+let identity = null;
+let showCreateForm = false; // true = show the create-group form (first-time or "+ New Group")
+let tab = "members";
+let addContribFor = null; // memberId with the add-contribution form open
+let historyOpenFor = null; // memberId whose contribution history is expanded
+let renamingId = null; // memberId currently being renamed
+let editingEntryId = null; // contribution entry currently being edited
+let editingGroupId = null; // groupId whose name/currency is being edited (from the groups list)
+let confirmDialog = null; // {message, confirmLabel, onConfirm} — generic double-check dialog
+let toastTimer = null;
+
+/* ===================== Calculations ===================== */
+function computeTotals(g){
+  const ids = g.members.map(m=>m.id);
+  const auto={}, owed={}, manualMap={}; ids.forEach(id=>{auto[id]=0;owed[id]=0;manualMap[id]=0;});
+  (g.contributionLog||[]).forEach(entry=>{
+    manualMap[entry.memberId] = (manualMap[entry.memberId]||0) + Number(entry.amount||0);
+  });
+  g.expenses.forEach(ex=>{
+    if(ex.source!=="fund" && ex.paidBy){ auto[ex.paidBy]=(auto[ex.paidBy]||0)+ex.amount; }
+    const scope = ex.splitType==="all" ? ids : (ex.selectedMembers||[]).filter(id=>ids.includes(id));
+    const per = scope.length ? ex.amount/scope.length : 0;
+    scope.forEach(id=>{ owed[id]=(owed[id]||0)+per; });
+  });
+  const rows = g.members.map(m=>{
+    const manual = manualMap[m.id]||0;
+    const contribTotal = manual + (auto[m.id]||0);
+    return {id:m.id, name:m.name, contribTotal, auto:auto[m.id]||0, owed:owed[m.id]||0, balance: contribTotal - (owed[m.id]||0)};
+  });
+  const totalExpenses = g.expenses.reduce((s,e)=>s+e.amount,0);
+  const totalPool = rows.reduce((s,r)=>s+r.contribTotal,0);
+  return {rows, totalExpenses, totalPool};
+}
+
+// Migrates older saved groups (single contributions{memberId:number}) into a dated log.
+function migrateGroup(g){
+  if(!g || g.contributionLog) return g;
+  const log = Object.entries(g.contributions||{})
+    .filter(([,amt])=>Number(amt)>0)
+    .map(([memberId,amt])=>({id:uid(), memberId, amount:Number(amt),
+      date: g.updatedAt ? new Date(g.updatedAt).toISOString() : new Date().toISOString(),
+      note:"Opening balance", addedBy:g.adminId}));
+  return {...g, contributionLog: log};
+}
+
+/* ===================== Render helpers ===================== */
+const root = document.getElementById("root");
+function render(){
+  root.innerHTML = view() + confirmDialogHtml() + editGroupModalHtml();
+  attachHandlers();
+  if(group && identity && tab==='report'){
+    refreshReportImage(computeTotals(group));
+  }
+}
+function askConfirm(message, onConfirm, confirmLabel){
+  confirmDialog = { message, onConfirm, confirmLabel: confirmLabel || "Confirm" };
+  render();
+}
+function closeConfirm(){ confirmDialog = null; render(); }
+function confirmDialogHtml(){
+  if(!confirmDialog) return "";
+  return `
+  <div class="modal-overlay" id="confirmOverlay">
+    <div class="modal-panel" style="max-width:360px;">
+      <p style="font-size:14px;line-height:1.5;margin:0 0 18px;">${confirmDialog.message}</p>
+      <div style="display:flex;gap:8px;">
+        <button id="confirmCancelBtn" class="btn-ghost" style="flex:1;">Cancel</button>
+        <button id="confirmOkBtn" style="flex:1;background:var(--brick);color:#fff;border-radius:12px;padding:10px;font-weight:600;">${esc(confirmDialog.confirmLabel)}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function deleteGroupById(id){
+  try{
+    localStorage.removeItem(groupKey(id));
+    localStorage.removeItem(identityKey(id));
+  }catch(e){}
+  if(activeGroupId===id){ activeGroupId=null; group=null; identity=null; }
+  showToast("Group deleted");
+  render();
+}
+function editGroupModalHtml(){
+  if(!editingGroupId) return "";
+  const g = load(groupKey(editingGroupId));
+  if(!g){ editingGroupId = null; return ""; }
+  return `
+  <div class="modal-overlay" id="editGroupOverlay">
+    <div class="modal-panel" style="max-width:380px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 class="serif" style="margin:0;font-size:19px;">Edit group</h2>
+        <button id="closeEditGroupBtn" style="background:none;font-size:18px;">✕</button>
+      </div>
+      <div class="field"><label>Group name</label><input id="editGroupName" value="${esc(g.groupName)}"></div>
+      <div class="field"><label>Currency symbol</label>
+        <select id="editGroupCurrency">
+          ${["₹","$","€","£"].map(c=>`<option value="${c}" ${g.currency===c?"selected":""}>${c} ${c==="₹"?"Rupee":c==="$"?"Dollar":c==="€"?"Euro":"Pound"}</option>`).join("")}
+        </select>
+      </div>
+      <button class="btn-primary" id="saveGroupEditBtn">Save changes</button>
+    </div>
+  </div>`;
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function showToast(msg){
+  let t = document.getElementById("toast");
+  if(!t){ t = document.createElement("div"); t.id="toast"; t.className="toast"; document.body.appendChild(t); }
+  t.textContent = msg; t.style.display="block";
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>{ t.style.display="none"; }, 2200);
+}
+function showTextFallback(text){
+  const box = document.getElementById("textFallbackBox");
+  if(!box) return;
+  box.innerHTML = `
+    <textarea id="textFallbackArea" readonly rows="8" style="width:100%;box-sizing:border-box;border-radius:12px;padding:10px;
+      border:1px solid var(--line);background:#fff;color:var(--ink);font-family:'SF Mono',Consolas,'IBM Plex Mono',monospace;font-size:12px;margin-top:8px;">${esc(text)}</textarea>
+    <p class="faint" style="font-size:11px;margin-top:6px;">Tap inside the box, select all, and copy — this works even when the copy button can't.</p>`;
+  const ta = document.getElementById("textFallbackArea");
+  if(ta){ ta.focus(); ta.select(); }
+}
+function hideTextFallback(){
+  const box = document.getElementById("textFallbackBox");
+  if(box) box.innerHTML = "";
+}
+
+/* ===================== Views ===================== */
+function view(){
+  if(activeGroupId && group){
+    const me = identity ? group.members.find(m=>m.id===identity.memberId) : null;
+    if(!me) return identityView();
+    return mainView(me);
+  }
+  const groups = listGroups();
+  if(showCreateForm || groups.length===0) return createGroupView(groups.length>0);
+  return groupsListView(groups);
+}
+
+function groupsListView(groups){
+  const cards = groups.map(g=>`
+    <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <button data-open-group="${g.id}" style="flex:1;text-align:left;background:none;display:flex;justify-content:space-between;align-items:center;min-width:0;">
+        <div style="min-width:0;">
+          <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(g.groupName)}</div>
+          <div class="faint mono" style="font-size:12px;margin-top:2px;">${g.memberCount} member${g.memberCount===1?'':'s'} · pool ${fmt(g.pool,g.currency)}</div>
+          <div class="faint" style="font-size:11px;margin-top:2px;">${g.youAreIn ? 'You: '+esc(g.yourName) : 'Tap to join'}</div>
+        </div>
+        <span class="faint" style="font-size:18px;flex-shrink:0;margin-left:8px;">›</span>
+      </button>
+      ${g.isAdminHere ? `
+        <span style="display:flex;gap:8px;flex-shrink:0;">
+          <button data-edit-group="${g.id}" aria-label="Edit group" style="background:none;color:var(--faint);font-size:15px;">✏️</button>
+          <button data-delete-group="${g.id}" data-group-name="${esc(g.groupName)}" aria-label="Delete group" style="background:none;color:var(--brick);font-size:15px;">🗑</button>
+        </span>` : ''}
+    </div>`).join("");
+  return `
+  <div class="center-screen coin-field" style="align-items:flex-start;padding-top:calc(48px + var(--safe-top));">
+    <div style="width:100%;max-width:420px;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">₹ आपसी हिसाब</div>
+        <h1 class="serif" style="font-size:26px;color:var(--paper);margin:0;">My Groups</h1>
+        <p class="faint" style="color:#EEF0E499;font-size:13px;">Pick a group, or start a new one.</p>
+      </div>
+      <div class="card note-texture" style="padding:6px;margin-bottom:14px;">
+        ${cards}
+      </div>
+      <button class="btn-primary" id="newGroupBtn">＋ New Group</button>
+    </div>
+  </div>`;
+}
+
+function createGroupView(hasExisting){
+  return `
+  <div class="center-screen coin-field">
+    <div style="width:100%;max-width:380px;">
+      ${hasExisting ? `<button id="backToGroupsBtn" class="faint" style="background:none;font-size:13px;margin-bottom:14px;">‹ All Groups</button>` : ""}
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="display:inline-flex;padding:12px;border-radius:999px;background:rgba(201,162,39,0.13);border:1px dashed rgba(201,162,39,0.4);margin-bottom:10px;">
+          <span style="font-size:20px;">₹</span>
+        </div>
+        <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">${hasExisting ? "New group" : "Welcome to"}</div>
+        <h1 class="serif" style="font-size:30px;color:var(--paper);margin:0;">${hasExisting ? "Start a new group" : "आपसी हिसाब"}</h1>
+        <p class="faint" style="color:#EEF0E499;font-size:14px;">For a trip, a household, any shared pot of money.</p>
+      </div>
+      <div class="card note-texture" style="padding:20px;">
+        <div class="field"><label>Group name</label><input id="gname" placeholder="Goa Trip, Flat 3B…"></div>
+        <div class="field"><label>Your name</label><input id="yname" placeholder="You'll be the admin"></div>
+        <div class="field"><label>Currency symbol</label>
+          <select id="curr">
+            <option value="₹">₹ Rupee</option><option value="$">$ Dollar</option>
+            <option value="€">€ Euro</option><option value="£">£ Pound</option>
+          </select>
+        </div>
+        <button class="btn-primary" id="createBtn">Create group →</button>
+      </div>
+      <div style="display:flex;justify-content:center;gap:18px;margin-top:18px;color:rgba(201,162,39,0.55);font-size:15px;">
+        <span>💵</span><span>🪙</span><span>🧮</span><span>🖋️</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function identityView(){
+  const members = group.members.map(m=>`
+    <button class="row" data-pick="${m.id}" style="width:100%;text-align:left;background:none;display:flex;justify-content:space-between;align-items:center;">
+      <span>${esc(m.name)} ${m.id===group.adminId?'<span style="color:var(--gold)">👑</span>':''}</span><span class="faint">›</span>
+    </button>`).join("");
+  return `
+  <div class="center-screen coin-field">
+    <div style="width:100%;max-width:380px;">
+      <button id="backToGroupsBtn2" class="faint" style="background:none;font-size:13px;margin-bottom:14px;">‹ All Groups</button>
+      <div style="text-align:center;margin-bottom:20px;">
+        <h1 class="serif" style="font-size:28px;color:var(--paper);margin:0;">${esc(group.groupName)}</h1>
+        <p class="faint" style="color:#EEF0E499;font-size:14px;">Who's checking the ledger?</p>
+      </div>
+      <div class="card note-texture" style="padding:6px;">
+        ${members}
+        <div style="padding:10px;">
+          <input id="newName" placeholder="Your name if you're new" style="margin-bottom:8px;">
+          <button class="btn-primary" id="joinBtn">I'm new here</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function mainView(me){
+  const totals = computeTotals(group);
+  const isAdmin = me.id === group.adminId;
+  return `
+  <div class="hdr note-texture">
+    <div class="container" style="padding:0;display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <button id="allGroupsBtn" style="background:none;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:0;">₹ आपसी हिसाब · all groups</button>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="serif" style="font-size:24px;">${esc(group.groupName)}</div>
+          ${isAdmin ? `
+            <button data-edit-group="${group.id}" aria-label="Edit group" style="background:none;color:#EEF0E4AA;font-size:14px;padding:0;">✏️</button>
+            <button data-delete-group="${group.id}" data-group-name="${esc(group.groupName)}" aria-label="Delete group" style="background:none;color:#EEF0E4AA;font-size:14px;padding:0;">🗑</button>
+          ` : ''}
+        </div>
+      </div>
+      <button id="switchIdBtn" class="pill" style="background:#ffffff22;color:var(--paper);">${esc(me.name)} ${isAdmin?'👑':''}</button>
+    </div>
+    <div style="font-size:11px;color:#EEF0E499;margin-top:10px;">💾 Saved on this device · offline-ready</div>
+  </div>
+  <div class="tabbar">
+    <div class="container" style="display:flex;gap:4px;padding:0;">
+      <button class="tab ${tab==='members'?'active':''}" data-tab="members">👥 Members</button>
+      <button class="tab ${tab==='expenses'?'active':''}" data-tab="expenses">🧾 Expenses</button>
+      <button class="tab ${tab==='report'?'active':''}" data-tab="report">🧮 Report</button>
+    </div>
+  </div>
+  <div class="container" style="padding-top:16px;">
+    ${tab==='members' ? membersTab(totals, isAdmin) : tab==='expenses' ? expensesTab(me, isAdmin) : reportTab(totals)}
+  </div>
+  ${modalHtml ? modalHtml : ""}
+  `;
+}
+
+function membersTab(totals, isAdmin){
+  const settled = Math.abs(totals.totalPool - totals.totalExpenses) < 0.01;
+  const rowsById = Object.fromEntries(totals.rows.map(r=>[r.id,r]));
+  const rows = group.members.map((m,i)=>{
+    const r = rowsById[m.id];
+    const bal = r.balance;
+    const color = bal>=0.005?'var(--brand)':bal<=-0.005?'var(--brick)':'var(--faint)';
+    const label = bal>=0.005?'gets back':bal<=-0.005?'owes':'settled';
+    const entries = (group.contributionLog||[]).filter(e=>e.memberId===m.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const isAdding = addContribFor === m.id;
+    const isHistoryOpen = historyOpenFor === m.id;
+    const isRenaming = renamingId === m.id;
+    const canRename = isAdmin || m.id === identity.memberId;
+
+    const addForm = isAdding ? `
+      <div class="card" style="background:var(--paper2);padding:10px;margin-top:8px;">
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <input id="contribAmount" type="number" placeholder="Amount (${group.currency})" style="flex:1;">
+          <button id="submitContribBtn" style="background:var(--brand);color:var(--paper);border-radius:10px;padding:0 14px;">✓</button>
+          <button id="closeAddContribBtn" style="background:none;padding:0 6px;">✕</button>
+        </div>
+        <input id="contribNote" placeholder="Note (optional) — e.g. cash handed to admin" style="font-size:13px;">
+      </div>` : "";
+
+    const historyList = isHistoryOpen ? `
+      <div class="card" style="margin-top:8px;">
+        ${entries.length===0 ? `<div class="row faint" style="font-size:12px;">No manual contributions logged yet.</div>` :
+          entries.map(e=>{
+            if(editingEntryId===e.id){
+              return `<div class="row">
+                <div style="display:flex;gap:6px;margin-bottom:6px;">
+                  <input id="editEntryAmount" data-entry-id="${e.id}" type="number" value="${e.amount}" style="flex:1;">
+                  <button id="submitEditEntryBtn" style="background:var(--brand);color:var(--paper);border-radius:10px;padding:0 14px;">✓</button>
+                  <button id="closeEditEntryBtn" style="background:none;padding:0 6px;">✕</button>
+                </div>
+                <input id="editEntryNote" placeholder="Note (optional)" value="${esc(e.note||"")}" style="font-size:13px;">
+              </div>`;
+            }
+            return `
+          <div class="row" style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div class="mono" style="font-weight:600;font-size:13px;">${fmt(e.amount, group.currency)}</div>
+              <div class="faint" style="font-size:11px;">${new Date(e.date).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}${e.note?' · '+esc(e.note):''}</div>
+            </div>
+            ${isAdmin ? `<span style="display:flex;gap:10px;"><button data-edit-contrib="${e.id}" style="background:none;color:var(--faint);">✏️</button><button data-del-contrib="${e.id}" style="background:none;color:var(--faint);">🗑</button></span>` : ''}
+          </div>`;
+          }).join("")}
+      </div>` : "";
+
+    return `
+    <div class="row">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        ${isRenaming ? `
+          <div style="display:flex;gap:6px;flex:1;margin-right:8px;">
+            <input id="renameInput" data-member-id="${m.id}" value="${esc(m.name)}" style="flex:1;">
+            <button id="submitRenameBtn" style="background:var(--brand);color:var(--paper);border-radius:10px;padding:0 12px;">✓</button>
+            <button id="closeRenameBtn" style="background:none;padding:0 6px;">✕</button>
+          </div>
+        ` : `
+          <span style="font-weight:600;display:flex;align-items:center;gap:6px;">${esc(m.name)} ${m.id===group.adminId?'<span style="color:var(--gold)">👑</span>':''}
+            ${canRename ? `<button data-rename="${m.id}" style="background:none;color:var(--faint);font-size:12px;">✏️</button>` : ''}
+          </span>
+        `}
+        <div style="text-align:right;">
+          <div class="mono" style="font-weight:700;color:${color};">${fmt(Math.abs(bal), group.currency)}</div>
+          <div class="faint" style="font-size:10px;">${label}</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:12px;" class="faint">
+        <button data-toggle-history="${m.id}" class="mono" style="background:none;text-decoration:underline;color:var(--faint);text-align:left;">
+          contributed ${fmt(r.contribTotal, group.currency)}${r.auto>0?` (${fmt(r.auto,group.currency)} from pocket)`:''}${entries.length>0?` · ${entries.length} entr${entries.length===1?'y':'ies'}`:''}
+        </button>
+        ${isAdmin && !isAdding ? `<button data-open-add-contrib="${m.id}" style="background:none;color:var(--brand);font-weight:600;font-size:12px;">＋ add</button>` : ''}
+      </div>
+      ${addForm}
+      ${historyList}
+      ${isAdmin && m.id!==group.adminId ? `<button data-remove-member="${m.id}" style="background:none;color:var(--brick);font-size:11px;margin-top:6px;">Remove member</button>` : ''}
+    </div>`;
+  }).join("");
+
+  return `
+    <div class="card note-texture" style="background:var(--deep);padding:16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);">🪙 Pool</div>
+        <div class="serif mono" style="font-size:24px;color:var(--paper);">${fmt(totals.totalPool, group.currency)}</div>
+        <div class="mono" style="font-size:12px;color:#EEF0E488;">${fmt(totals.totalExpenses, group.currency)} spent so far</div>
+      </div>
+      <div class="pill" style="border:1px dashed ${settled?'var(--brand)':'var(--gold)'};color:${settled?'#8FD9B6':'var(--gold)'};">${settled?'SETTLED':'OPEN'}</div>
+    </div>
+    <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Members · ${group.members.length}</div>
+    <div class="card">${rows}</div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <input id="newMemberName" placeholder="Add a member by name">
+      <button class="btn-ghost" id="addMemberBtn" style="background:var(--brand);color:var(--paper);">＋</button>
+    </div>
+    ${!isAdmin ? `<p class="faint" style="font-size:12px;margin-top:10px;">Only the admin can log new contributions. Tap "contributed…" on any member to see their history.</p>` : ''}
+  `;
+}
+
+function expensesTab(me, isAdmin){
+  const sorted = [...group.expenses].sort((a,b)=> new Date(b.date)-new Date(a.date));
+  const list = sorted.length===0 ? `<div class="card" style="border:1px dashed var(--line);padding:32px;text-align:center;"><span class="faint">No expenses yet.</span></div>` :
+    `<div class="card">${sorted.map((ex,i)=>{
+      const payer = group.members.find(m=>m.id===ex.paidBy);
+      const cat = CAT[ex.category]||CAT.other;
+      const scopeNames = ex.splitType==="all" ? "everyone" : (ex.selectedMembers||[]).map(id=>group.members.find(m=>m.id===id)?.name).filter(Boolean).join(", ");
+      const canDel = isAdmin || ex.addedBy===me.id;
+      return `<div class="row" style="display:flex;gap:10px;">
+        <div class="mono faint" style="font-size:11px;min-width:20px;">${String(sorted.length-i).padStart(2,'0')}</div>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;gap:8px;">
+            <span style="font-weight:600;">${cat.emoji} ${esc(ex.description)}</span>
+            <span class="mono" style="font-weight:700;white-space:nowrap;">${fmt(ex.amount, group.currency)}</span>
+          </div>
+          <div class="faint" style="font-size:12px;margin-top:2px;">${cat.label} · ${ex.source==='fund' ? 'from group fund' : 'paid by <strong>'+esc(payer?payer.name:'removed')+'</strong>'} · split among ${esc(scopeNames)}</div>
+        </div>
+        ${canDel ? `<button data-del-expense="${ex.id}" style="background:none;color:var(--faint);">🗑</button>` : ''}
+      </div>`;
+    }).join("")}</div>`;
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Expense log · ${group.expenses.length}</div>
+      <button id="openAddExpense" class="pill" style="background:var(--brand);color:var(--paper);">🖋️ Add expense</button>
+    </div>
+    ${list}
+  `;
+}
+
+function reportTab(totals){
+  const settled = Math.abs(totals.totalPool - totals.totalExpenses) < 0.01;
+  const rows = totals.rows.map(r=>{
+    const color = r.balance>=0.005?'var(--brand)':r.balance<=-0.005?'var(--brick)':'var(--faint)';
+    const sign = r.balance>=0.005?'+':r.balance<=-0.005?'−':'';
+    return `<tr><td style="font-weight:600;">${esc(r.name)}</td><td class="mono" style="text-align:right;">${fmt(r.contribTotal,group.currency)}</td>
+      <td class="mono" style="text-align:right;">${fmt(r.owed,group.currency)}</td><td class="mono" style="font-weight:700;text-align:right;color:${color};">${sign}${fmt(Math.abs(r.balance),group.currency)}</td></tr>`;
+  }).join("");
+
+  const settlements = computeSettlements(totals);
+  const settleHtml = settlements.length===0
+    ? `<div class="card" style="border:1px dashed var(--line);padding:24px;text-align:center;margin-bottom:16px;"><span class="faint" style="font-size:13px;">Everyone's settled up.</span></div>`
+    : `<div class="card" style="margin-bottom:16px;">${settlements.map((tx,i)=>`
+        <div class="row" style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:14px;"><strong style="color:var(--brick);">${esc(tx.from)}</strong> <span class="faint">→</span> <strong style="color:var(--brand);">${esc(tx.to)}</strong></span>
+          <span class="mono" style="font-weight:700;">${fmt(tx.amount, group.currency)}</span>
+        </div>`).join("")}</div>`;
+
+  const expList = [...group.expenses].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const expTableHtml = expList.length===0
+    ? `<div class="card" style="border:1px dashed var(--line);padding:24px;text-align:center;margin-bottom:16px;"><span class="faint" style="font-size:13px;">No expenses recorded yet.</span></div>`
+    : `<div class="card" style="margin-bottom:16px;"><table>
+        <thead><tr><th>#</th><th>Expense</th><th style="text-align:right;">Amount</th><th style="text-align:right;">Paid from</th></tr></thead>
+        <tbody>${expList.map((ex,i)=>{
+          const cat = CAT[ex.category]||CAT.other;
+          const payer = group.members.find(m=>m.id===ex.paidBy);
+          const src = ex.source==='fund' ? 'Group fund' : (payer?payer.name:'—');
+          return `<tr><td class="mono" style="font-size:11px;color:var(--faint);">${String(i+1).padStart(2,'0')}</td>
+            <td>${cat.emoji} ${esc(ex.description)}</td>
+            <td class="mono" style="text-align:right;white-space:nowrap;">${fmt(ex.amount, group.currency)}</td>
+            <td style="text-align:right;font-size:12px;color:var(--faint);white-space:nowrap;">${esc(src)}</td></tr>`;
+        }).join("")}</tbody>
+      </table></div>`;
+
+  return `
+    <div class="card note-texture" style="background:var(--deep);padding:18px;margin-bottom:16px;position:relative;overflow:hidden;">
+      <div style="position:absolute;right:-6px;top:-6px;width:80px;height:80px;border:2px dashed ${settled?'var(--brand)':'var(--gold)'};border-radius:50%;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(12deg);font-size:10px;font-weight:700;letter-spacing:.05em;
+        color:${settled?'#8FD9B6':'var(--gold)'};text-align:center;gap:2px;"><span style="font-size:13px;">₹</span>${settled?'SETTLED':'OPEN'}</div>
+      <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);">💵 ${esc(group.groupName)}</div>
+      <div class="serif" style="font-size:18px;color:var(--paper);">Settlement report</div>
+      <div class="mono" style="font-size:12px;color:#EEF0E499;margin-top:4px;">${group.members.length} members · ${expList.length} expenses · pool ${fmt(totals.totalPool, group.currency)}</div>
+    </div>
+    <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Balances</div>
+    <div class="card" style="margin-bottom:16px;"><table>
+      <thead><tr><th>Member</th><th style="text-align:right;">Contributed</th><th style="text-align:right;">Share</th><th style="text-align:right;">Balance</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Who Owes Whom</div>
+    ${settleHtml}
+    <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Expense details</div>
+    ${expTableHtml}
+    <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Shareable image</div>
+    <div class="card" id="reportImgBox" style="margin-bottom:8px;border:1px solid var(--line);">
+      <div style="padding:40px;text-align:center;" class="faint">Preparing image…</div>
+    </div>
+    <p class="faint" style="font-size:11px;text-align:center;margin:0 0 12px;">Press and hold the image above (or right-click on desktop) to save or share it directly.</p>
+    <button id="copyTextBtn" style="background:none;text-decoration:underline;color:var(--faint);font-size:12px;width:100%;text-align:center;padding:4px;">Copy details as text</button>
+    <div id="textFallbackBox"></div>
+    <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px;">Backup & sync between devices</div>
+    <div class="card" style="padding:14px;margin-bottom:16px;">
+      <p class="faint" style="font-size:12px;margin:0 0 10px;">This app stores data only on this device. To share updates with the group, export a backup file and send it — others import it to catch up.</p>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-ghost" id="exportBtn" style="flex:1;">⭳ Export backup</button>
+        <label class="btn-ghost" style="flex:1;text-align:center;">
+          ⭱ Import backup<input type="file" id="importFile" accept="application/json" style="display:none;">
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function computeSettlements(totals){
+  // Creditors are processed smallest-balance-first so they get fully paid off
+  // before moving on to the next — rather than splitting debtor payments
+  // equally/proportionally across everyone owed money.
+  const creditors = totals.rows.filter(r=>r.balance>0.005).map(r=>({name:r.name, amt:r.balance})).sort((a,b)=>a.amt-b.amt);
+  const debtors = totals.rows.filter(r=>r.balance<-0.005).map(r=>({name:r.name, amt:-r.balance})).sort((a,b)=>b.amt-a.amt);
+  const tx = [];
+  let i=0, j=0;
+  while(i<debtors.length && j<creditors.length){
+    const d = debtors[i], c = creditors[j];
+    const amount = Math.min(d.amt, c.amt);
+    if(amount>0.005) tx.push({from:d.name, to:c.name, amount});
+    d.amt -= amount; c.amt -= amount;
+    if(d.amt<=0.005) i++;
+    if(c.amt<=0.005) j++;
+  }
+  return tx;
+}
+
+function buildReportText(totals){
+  const lines = [];
+  lines.push(`*${group.groupName} — Settlement Report*`);
+  lines.push(`${group.members.length} members · ${group.expenses.length} expenses · pool ${fmt(totals.totalPool, group.currency)}`);
+  lines.push(""); lines.push("*Balances*");
+  totals.rows.forEach(r=>{
+    const tag = r.balance>=0.005?'gets back':r.balance<=-0.005?'owes':'settled';
+    lines.push(`• ${r.name}: contributed ${fmt(r.contribTotal, group.currency)}, share ${fmt(r.owed, group.currency)} → ${tag} ${fmt(Math.abs(r.balance), group.currency)}`);
+  });
+  const settlements = computeSettlements(totals);
+  lines.push(""); lines.push("*Who Owes Whom*");
+  if(settlements.length===0){
+    lines.push("Everyone's settled up.");
+  } else {
+    settlements.forEach(tx=>{
+      lines.push(`• ${tx.from} → ${tx.to}: ${fmt(tx.amount, group.currency)}`);
+    });
+  }
+  if(group.expenses.length){
+    lines.push(""); lines.push("*Expenses*");
+    [...group.expenses].sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach((ex,i)=>{
+      const payer = group.members.find(m=>m.id===ex.paidBy);
+      const cat = CAT[ex.category]||CAT.other;
+      const src = ex.source==='fund' ? 'group fund' : (payer?payer.name:'—');
+      lines.push(`${i+1}. ${cat.emoji} ${ex.description} — ${fmt(ex.amount, group.currency)} (${ex.source==='fund'?'from':'paid by'} ${src})`);
+    });
+  }
+  return lines.join("\n");
+}
+
+/* ===================== Shareable report image (canvas, fully offline) ===================== */
+function roundRectPath(ctx,x,y,w,h,r){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr);
+  ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath();
+}
+function truncateToWidth(ctx,text,maxWidth){
+  if(ctx.measureText(text).width<=maxWidth) return text;
+  let t=text;
+  while(t.length>1 && ctx.measureText(t+"…").width>maxWidth) t=t.slice(0,-1);
+  return t+"…";
+}
+async function drawReportCanvas(totals){
+  try{
+    if(document.fonts) await Promise.race([document.fonts.ready, new Promise(res=>setTimeout(res,350))]);
+  }catch(e){}
+  const dpr=2, W=720, padX=28;
+  const headerH=118, gap=22, headRowH=28, rowH=36, bottomPad=22;
+  const xA=padX+380, xB=padX+500, xC=W-padX;
+  const balRows = totals.rows;
+  const expList = [...group.expenses].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const settlements = computeSettlements(totals);
+  const balTableH = headRowH + balRows.length*rowH;
+  const settleTableH = headRowH + Math.max(settlements.length,1)*rowH;
+  const expTableH = headRowH + Math.max(expList.length,1)*rowH;
+  const H = headerH+gap+balTableH+gap+settleTableH+gap+expTableH+bottomPad;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(W*dpr); canvas.height = Math.ceil(H*dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr,dpr);
+
+  ctx.fillStyle = COLORS.paper; roundRectPath(ctx,0,0,W,H,18); ctx.fill();
+  ctx.save(); roundRectPath(ctx,0,0,W,headerH,18); ctx.clip();
+  ctx.fillStyle = COLORS.deep; ctx.fillRect(0,0,W,headerH); ctx.restore();
+
+  ctx.textAlign="left";
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = "700 12px sans-serif";
+  ctx.fillText("आपसी हिसाब · SETTLEMENT REPORT", padX, 32);
+
+  ctx.fillStyle = "#EEF0E4";
+  ctx.font = "600 26px Georgia, serif";
+  ctx.fillText(truncateToWidth(ctx, group.groupName, W-padX*2-100), padX, 68);
+
+  ctx.fillStyle = "rgba(238,240,228,0.75)";
+  ctx.font = "13px monospace";
+  ctx.fillText(`${group.members.length} members · ${expList.length} expenses · pool ${fmt(totals.totalPool, group.currency)}`, padX, 94);
+
+  const settled = Math.abs(totals.totalPool - totals.totalExpenses) < 0.01;
+  const pillText = settled ? "SETTLED" : "OPEN";
+  ctx.font = "700 11px sans-serif";
+  const pillW = ctx.measureText(pillText).width+30, pillH=26, pillX=W-padX-pillW, pillY=24;
+  ctx.strokeStyle = settled ? COLORS.brand : COLORS.gold; ctx.lineWidth=1.5;
+  roundRectPath(ctx,pillX,pillY,pillW,pillH,pillH/2); ctx.stroke();
+  ctx.fillStyle = settled ? "#8FD9B6" : COLORS.gold;
+  ctx.textAlign="center"; ctx.fillText(pillText, pillX+pillW/2, pillY+pillH/2+4); ctx.textAlign="left";
+
+  let y = headerH+gap;
+  ctx.fillStyle=COLORS.faint; ctx.font="700 10px sans-serif";
+  ctx.fillText("MEMBER", padX, y+16);
+  ctx.textAlign="right";
+  ctx.fillText("CONTRIBUTED", xA, y+16); ctx.fillText("SHARE", xB, y+16); ctx.fillText("BALANCE", xC, y+16);
+  ctx.textAlign="left"; y+=headRowH;
+  ctx.strokeStyle=COLORS.line; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(padX,y); ctx.lineTo(W-padX,y); ctx.stroke();
+
+  balRows.forEach((r,i)=>{
+    if(i%2===1){ ctx.fillStyle="rgba(0,0,0,0.025)"; ctx.fillRect(padX-8,y,W-padX*2+16,rowH); }
+    const cy=y+rowH/2+5;
+    ctx.fillStyle=COLORS.ink; ctx.font="600 14px sans-serif"; ctx.textAlign="left";
+    ctx.fillText(truncateToWidth(ctx, r.name, xA-padX-20), padX, cy);
+    ctx.font="14px monospace"; ctx.textAlign="right"; ctx.fillStyle=COLORS.ink;
+    ctx.fillText(fmt(r.contribTotal, group.currency), xA, cy);
+    ctx.fillText(fmt(r.owed, group.currency), xB, cy);
+    ctx.font="700 14px monospace";
+    ctx.fillStyle = r.balance>=0.005?COLORS.brand:r.balance<=-0.005?COLORS.brick:COLORS.faint;
+    const sign = r.balance>=0.005?"+":r.balance<=-0.005?"−":"";
+    ctx.fillText(sign+fmt(Math.abs(r.balance), group.currency), xC, cy);
+    ctx.textAlign="left";
+    ctx.strokeStyle=COLORS.line; ctx.beginPath(); ctx.moveTo(padX,y+rowH); ctx.lineTo(W-padX,y+rowH); ctx.stroke();
+    y+=rowH;
+  });
+
+  y+=gap;
+  ctx.fillStyle=COLORS.faint; ctx.font="700 10px sans-serif"; ctx.textAlign="left";
+  ctx.fillText("WHO OWES WHOM", padX, y+16);
+  ctx.textAlign="right"; ctx.fillText("AMOUNT", xC, y+16);
+  ctx.textAlign="left"; y+=headRowH;
+  ctx.strokeStyle=COLORS.line; ctx.beginPath(); ctx.moveTo(padX,y); ctx.lineTo(W-padX,y); ctx.stroke();
+
+  if(settlements.length===0){
+    ctx.fillStyle=COLORS.faint; ctx.font="13px sans-serif";
+    ctx.fillText("Everyone's settled up.", padX, y+rowH/2+5);
+    y+=rowH;
+  } else {
+    settlements.forEach((tx,i)=>{
+      if(i%2===1){ ctx.fillStyle="rgba(0,0,0,0.025)"; ctx.fillRect(padX-8,y,W-padX*2+16,rowH); }
+      const cy=y+rowH/2+5;
+      ctx.font="600 14px sans-serif"; ctx.textAlign="left";
+      ctx.fillStyle=COLORS.brick;
+      const fromW = ctx.measureText(tx.from).width;
+      ctx.fillText(tx.from, padX, cy);
+      ctx.fillStyle=COLORS.faint;
+      ctx.fillText(" → ", padX+fromW, cy);
+      const arrowW = ctx.measureText(" → ").width;
+      ctx.fillStyle=COLORS.brand;
+      ctx.fillText(truncateToWidth(ctx, tx.to, xC-(padX+fromW+arrowW)-90), padX+fromW+arrowW, cy);
+      ctx.font="700 14px monospace"; ctx.textAlign="right"; ctx.fillStyle=COLORS.ink;
+      ctx.fillText(fmt(tx.amount, group.currency), xC, cy);
+      ctx.textAlign="left";
+      ctx.strokeStyle=COLORS.line; ctx.beginPath(); ctx.moveTo(padX,y+rowH); ctx.lineTo(W-padX,y+rowH); ctx.stroke();
+      y+=rowH;
+    });
+  }
+
+  y+=gap;
+  ctx.fillStyle=COLORS.faint; ctx.font="700 10px sans-serif"; ctx.textAlign="left";
+  ctx.fillText("EXPENSE", padX, y+16);
+  ctx.textAlign="right"; ctx.fillText("AMOUNT", xB, y+16); ctx.fillText("PAID FROM", xC, y+16);
+  ctx.textAlign="left"; y+=headRowH;
+  ctx.strokeStyle=COLORS.line; ctx.beginPath(); ctx.moveTo(padX,y); ctx.lineTo(W-padX,y); ctx.stroke();
+
+  if(expList.length===0){
+    ctx.fillStyle=COLORS.faint; ctx.font="13px sans-serif";
+    ctx.fillText("No expenses recorded yet.", padX, y+rowH/2+5);
+    y+=rowH;
+  } else {
+    expList.forEach((ex,i)=>{
+      if(i%2===1){ ctx.fillStyle="rgba(0,0,0,0.025)"; ctx.fillRect(padX-8,y,W-padX*2+16,rowH); }
+      const cy=y+rowH/2+5;
+      const cat = CAT[ex.category]||CAT.other;
+      const payer = group.members.find(m=>m.id===ex.paidBy);
+      const src = ex.source==="fund" ? "Group fund" : (payer?payer.name:"—");
+      ctx.fillStyle=COLORS.faint; ctx.font="12px monospace"; ctx.textAlign="left";
+      ctx.fillText(String(i+1).padStart(2,"0"), padX, cy);
+      ctx.font="14px sans-serif"; ctx.fillStyle=COLORS.ink;
+      ctx.fillText(truncateToWidth(ctx, `${cat.emoji}  ${ex.description}`, xB-(padX+34)-90), padX+34, cy);
+      ctx.font="600 14px monospace"; ctx.textAlign="right"; ctx.fillStyle=COLORS.ink;
+      ctx.fillText(fmt(ex.amount, group.currency), xB, cy);
+      ctx.font="12px sans-serif"; ctx.fillStyle=COLORS.faint;
+      ctx.fillText(truncateToWidth(ctx, src, xC-xB-20), xC, cy);
+      ctx.textAlign="left";
+      ctx.strokeStyle=COLORS.line; ctx.beginPath(); ctx.moveTo(padX,y+rowH); ctx.lineTo(W-padX,y+rowH); ctx.stroke();
+      y+=rowH;
+    });
+  }
+  return canvas;
+}
+
+async function refreshReportImage(totals){
+  const box = document.getElementById("reportImgBox");
+  let done = false;
+  const failTimer = setTimeout(()=>{
+    if(!done && box) showImageError(box);
+  }, 6000);
+  try{
+    const canvas = await drawReportCanvas(totals);
+    const dataUrl = canvas.toDataURL("image/png");
+    done = true;
+    clearTimeout(failTimer);
+    currentReportCanvas = canvas;
+    if(box){
+      box.innerHTML = `<img id="reportImgEl" src="${dataUrl}" style="width:100%;display:block;" alt="Settlement report">`;
+    }
+  }catch(e){
+    done = true;
+    clearTimeout(failTimer);
+    if(box) showImageError(box);
+  }
+}
+function showImageError(box){
+  box.innerHTML = `<div style="padding:28px;text-align:center;">
+    <p class="faint" style="font-size:13px;margin:0 0 12px;">Couldn't generate the image preview on this device.</p>
+    <button id="retryImageBtn" class="btn-ghost" style="margin-bottom:10px;">Try again</button>
+    <p class="faint" style="font-size:12px;margin:0;">The tables above already have everything — "Copy details as text" below always works.</p>
+  </div>`;
+  const retryBtn = document.getElementById("retryImageBtn");
+  if(retryBtn) retryBtn.onclick = () => refreshReportImage(computeTotals(group));
+}
+
+/* ===================== Add-expense modal ===================== */
+let modalHtml = "";
+function openAddExpenseModal(){
+  modalHtml = `
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 class="serif" style="margin:0;font-size:20px;">Add an expense</h2>
+        <button id="closeModalBtn" style="background:none;font-size:18px;">✕</button>
+      </div>
+      <div class="field"><label>Category</label>
+        <select id="exCategory">${CATEGORIES.map(c=>`<option value="${c.id}">${c.emoji} ${c.label}</option>`).join("")}</select>
+      </div>
+      <div class="field"><label id="descLabel">Description (optional)</label>
+        <input id="exDesc" placeholder='Defaults to category name if left blank'>
+      </div>
+      <div class="field"><label>Amount (${group.currency})</label>
+        <input id="exAmount" type="number" placeholder="0.00">
+      </div>
+      <div class="field"><label>Source of this expense</label>
+        <div class="toggle-row">
+          <button class="toggle-btn active" data-source="fund">Group fund</button>
+          <button class="toggle-btn" data-source="pocket">Someone's pocket</button>
+        </div>
+        <p class="faint" id="sourceHint" style="font-size:11px;margin-top:4px;">Paid using money already contributed to the pool — no one's contribution changes.</p>
+      </div>
+      <div class="field" id="paidByField" style="display:none;"><label>Paid by</label>
+        <select id="exPaidBy">${group.members.map(m=>`<option value="${m.id}">${esc(m.name)}${m.id===identity.memberId?' (you)':''}</option>`).join("")}</select>
+      </div>
+      <div class="field"><label>Split among</label>
+        <div class="toggle-row">
+          <button class="toggle-btn active" data-split="all">Everyone</button>
+          <button class="toggle-btn" data-split="selected">Choose people</button>
+        </div>
+        <div id="selectMembersBox" class="card" style="display:none;padding:4px;direction:ltr;">
+          ${group.members.map(m=>`<div class="memberRow" data-toggle-member="${m.id}" style="display:grid;grid-template-columns:24px 1fr;align-items:center;width:100%;box-sizing:border-box;column-gap:10px;padding:9px 8px;border-radius:8px;direction:ltr;cursor:pointer;">
+            <input type="checkbox" class="memberCheck" value="${m.id}" checked style="width:16px;height:16px;margin:0;justify-self:start;"><span style="text-align:left;justify-self:start;font-size:14px;line-height:1.3;color:var(--ink);">${esc(m.name)}</span></div>`).join("")}
+        </div>
+      </div>
+      <button class="btn-primary" id="submitExpenseBtn">Add to ledger</button>
+    </div>
+  </div>`;
+  render();
+}
+function closeModal(){ modalHtml=""; render(); }
+
+/* ===================== Event handling (delegated) ===================== */
+function attachHandlers(){
+  const q = (sel) => document.querySelector(sel);
+  const qa = (sel) => document.querySelectorAll(sel);
+
+  if(q("#newGroupBtn")) q("#newGroupBtn").onclick = () => { showCreateForm = true; render(); };
+  if(q("#backToGroupsBtn")) q("#backToGroupsBtn").onclick = () => { showCreateForm = false; render(); };
+  if(q("#backToGroupsBtn2")) q("#backToGroupsBtn2").onclick = () => goToGroupsList();
+  if(q("#allGroupsBtn")) q("#allGroupsBtn").onclick = () => goToGroupsList();
+
+  qa("[data-open-group]").forEach(el => el.onclick = () => {
+    const id = el.getAttribute("data-open-group");
+    activeGroupId = id;
+    loadActiveGroup(id);
+    tab = "members";
+    render();
+  });
+
+  qa("[data-edit-group]").forEach(el => el.onclick = (e) => {
+    e.stopPropagation();
+    editingGroupId = el.getAttribute("data-edit-group");
+    render();
+  });
+  qa("[data-delete-group]").forEach(el => el.onclick = (e) => {
+    e.stopPropagation();
+    const id = el.getAttribute("data-delete-group");
+    const name = el.getAttribute("data-group-name");
+    askConfirm(
+      `Delete <strong>${esc(name)}</strong> permanently? This removes all its members, expenses, and contribution history from this device. This can't be undone.`,
+      () => deleteGroupById(id),
+      "Delete permanently"
+    );
+  });
+
+  if(q("#confirmCancelBtn")) q("#confirmCancelBtn").onclick = () => closeConfirm();
+  if(q("#confirmOverlay")) q("#confirmOverlay").onclick = (e) => { if(e.target.id==="confirmOverlay") closeConfirm(); };
+  if(q("#confirmOkBtn")) q("#confirmOkBtn").onclick = () => {
+    const action = confirmDialog && confirmDialog.onConfirm;
+    confirmDialog = null;
+    if(action) action();
+  };
+
+  if(q("#closeEditGroupBtn")) q("#closeEditGroupBtn").onclick = () => { editingGroupId = null; render(); };
+  if(q("#editGroupOverlay")) q("#editGroupOverlay").onclick = (e) => { if(e.target.id==="editGroupOverlay"){ editingGroupId = null; render(); } };
+  if(q("#saveGroupEditBtn")) q("#saveGroupEditBtn").onclick = () => {
+    const newName = q("#editGroupName").value.trim();
+    const newCurrency = q("#editGroupCurrency").value;
+    if(!newName){ showToast("Enter a group name"); return; }
+    const g = load(groupKey(editingGroupId));
+    if(!g){ editingGroupId = null; render(); return; }
+    g.groupName = newName;
+    g.currency = newCurrency;
+    g.updatedAt = Date.now();
+    save(groupKey(editingGroupId), g);
+    if(activeGroupId===editingGroupId && group){ group.groupName = newName; group.currency = newCurrency; }
+    editingGroupId = null;
+    showToast("Group updated");
+    render();
+  };
+
+  if(q("#createBtn")) q("#createBtn").onclick = () => {
+    const gname = q("#gname").value.trim(), yname = q("#yname").value.trim(), curr = q("#curr").value;
+    if(!gname || !yname){ showToast("Enter a group name and your name"); return; }
+    const admin = {id:uid(), name:yname};
+    const id = uid();
+    group = {id, groupName:gname, currency:curr, adminId:admin.id, members:[admin], contributionLog:[], expenses:[], updatedAt:Date.now()};
+    activeGroupId = id;
+    showCreateForm = false;
+    saveGroup();
+    setIdentity({memberId:admin.id});
+    render();
+  };
+
+  qa("[data-pick]").forEach(el => el.onclick = () => {
+    setIdentity({memberId: el.getAttribute("data-pick")});
+    render();
+  });
+  if(q("#joinBtn")) q("#joinBtn").onclick = () => {
+    const name = q("#newName").value.trim();
+    if(!name){ showToast("Enter your name"); return; }
+    const m = {id:uid(), name};
+    group.members.push(m); group.updatedAt=Date.now();
+    saveGroup();
+    setIdentity({memberId:m.id});
+    render();
+  };
+
+  if(q("#switchIdBtn")) q("#switchIdBtn").onclick = () => {
+    if(confirm("Switch identity for this group? You'll pick who you are again.")){
+      setIdentity(null); render();
+    }
+  };
+
+  qa("[data-tab]").forEach(el => el.onclick = () => { tab = el.getAttribute("data-tab"); render(); });
+
+  if(q("#addMemberBtn")) q("#addMemberBtn").onclick = () => {
+    const name = q("#newMemberName").value.trim();
+    if(!name) return;
+    const m = {id:uid(), name};
+    group.members.push(m); group.updatedAt=Date.now();
+    saveGroup(); showToast("Member added"); render();
+  };
+  qa("[data-remove-member]").forEach(el => el.onclick = () => {
+    const id = el.getAttribute("data-remove-member");
+    if(!confirm("Remove this member? Past expenses and contributions stay on record.")) return;
+    group.members = group.members.filter(m=>m.id!==id);
+    group.expenses.forEach(e=>{ e.selectedMembers = (e.selectedMembers||[]).filter(x=>x!==id); });
+    group.updatedAt = Date.now();
+    saveGroup(); render();
+  });
+
+  qa("[data-toggle-history]").forEach(el => el.onclick = () => {
+    const id = el.getAttribute("data-toggle-history");
+    historyOpenFor = historyOpenFor === id ? null : id;
+    addContribFor = null;
+    render();
+  });
+  qa("[data-open-add-contrib]").forEach(el => el.onclick = () => {
+    addContribFor = el.getAttribute("data-open-add-contrib");
+    render();
+  });
+  if(q("#closeAddContribBtn")) q("#closeAddContribBtn").onclick = () => { addContribFor = null; render(); };
+  if(q("#submitContribBtn")) q("#submitContribBtn").onclick = () => {
+    const amount = Number(q("#contribAmount").value);
+    if(!amount || amount<=0){ showToast("Enter a valid amount"); return; }
+    const note = q("#contribNote").value.trim();
+    const entry = {id:uid(), memberId:addContribFor, amount, date:new Date().toISOString(), note, addedBy:identity.memberId};
+    group.contributionLog = group.contributionLog || [];
+    group.contributionLog.push(entry);
+    group.updatedAt = Date.now();
+    saveGroup();
+    addContribFor = null; historyOpenFor = entry.memberId;
+    showToast("Contribution recorded"); render();
+  };
+  qa("[data-del-contrib]").forEach(el => el.onclick = () => {
+    if(!confirm("Remove this contribution entry?")) return;
+    const id = el.getAttribute("data-del-contrib");
+    group.contributionLog = (group.contributionLog||[]).filter(e=>e.id!==id);
+    group.updatedAt = Date.now();
+    saveGroup(); render();
+  });
+
+  qa("[data-rename]").forEach(el => el.onclick = () => {
+    renamingId = el.getAttribute("data-rename");
+    render();
+  });
+  if(q("#closeRenameBtn")) q("#closeRenameBtn").onclick = () => { renamingId = null; render(); };
+  if(q("#submitRenameBtn")) q("#submitRenameBtn").onclick = () => {
+    const input = q("#renameInput");
+    const id = input.getAttribute("data-member-id");
+    const newName = input.value.trim();
+    if(!newName) return;
+    group.members = group.members.map(m => m.id===id ? {...m, name:newName} : m);
+    group.updatedAt = Date.now();
+    saveGroup();
+    renamingId = null;
+    showToast("Name updated"); render();
+  };
+
+  qa("[data-edit-contrib]").forEach(el => el.onclick = () => {
+    editingEntryId = el.getAttribute("data-edit-contrib");
+    render();
+  });
+  if(q("#closeEditEntryBtn")) q("#closeEditEntryBtn").onclick = () => { editingEntryId = null; render(); };
+  if(q("#submitEditEntryBtn")) q("#submitEditEntryBtn").onclick = () => {
+    const amountInput = q("#editEntryAmount");
+    const id = amountInput.getAttribute("data-entry-id");
+    const amount = Number(amountInput.value);
+    if(!amount || amount<=0){ showToast("Enter a valid amount"); return; }
+    const note = q("#editEntryNote").value.trim();
+    group.contributionLog = (group.contributionLog||[]).map(e => e.id===id ? {...e, amount, note} : e);
+    group.updatedAt = Date.now();
+    saveGroup();
+    editingEntryId = null;
+    showToast("Contribution updated"); render();
+  };
+
+  if(q("#openAddExpense")) q("#openAddExpense").onclick = openAddExpenseModal;
+  if(q("#closeModalBtn")) q("#closeModalBtn").onclick = closeModal;
+  if(q("#modalOverlay")) q("#modalOverlay").onclick = (e) => { if(e.target.id==="modalOverlay") closeModal(); };
+
+  qa("[data-source]").forEach(el => el.onclick = () => {
+    qa("[data-source]").forEach(b=>b.classList.remove("active"));
+    el.classList.add("active");
+    const isPocket = el.getAttribute("data-source")==="pocket";
+    q("#paidByField").style.display = isPocket ? "block" : "none";
+    q("#sourceHint").textContent = isPocket
+      ? "Paid directly by a member, outside the pool — it's added to their contribution automatically."
+      : "Paid using money already contributed to the pool — no one's contribution changes.";
+  });
+  qa("[data-split]").forEach(el => el.onclick = () => {
+    qa("[data-split]").forEach(b=>b.classList.remove("active"));
+    el.classList.add("active");
+    q("#selectMembersBox").style.display = el.getAttribute("data-split")==="selected" ? "block" : "none";
+  });
+  qa("[data-toggle-member]").forEach(el => el.onclick = (e) => {
+    const cb = el.querySelector(".memberCheck");
+    if(e.target !== cb) cb.checked = !cb.checked;
+    el.style.background = cb.checked ? "rgba(45,106,79,0.08)" : "transparent";
+  });
+  if(q("#exCategory")) q("#exCategory").onchange = () => {
+    const isOther = q("#exCategory").value === "other";
+    q("#descLabel").textContent = isOther ? "Describe the expense" : "Description (optional)";
+  };
+
+  if(q("#submitExpenseBtn")) q("#submitExpenseBtn").onclick = () => {
+    const category = q("#exCategory").value;
+    const desc = q("#exDesc").value.trim();
+    const amount = Number(q("#exAmount").value);
+    const source = q('[data-source].active').getAttribute("data-source");
+    const splitType = q('[data-split].active').getAttribute("data-split");
+    const isOther = category==="other";
+    if(isOther && !desc){ showToast("Describe this 'Other' expense"); return; }
+    if(!amount || amount<=0){ showToast("Enter a valid amount"); return; }
+    let selectedMembers = group.members.map(m=>m.id);
+    if(splitType==="selected"){
+      selectedMembers = Array.from(qa(".memberCheck:checked")).map(el=>el.value);
+      if(selectedMembers.length===0){ showToast("Choose at least one person"); return; }
+    }
+    const paidBy = source==="pocket" ? q("#exPaidBy").value : null;
+    const ex = {id:uid(), date:new Date().toISOString(), addedBy:identity.memberId,
+      category, description: desc || CAT[category].label, amount, source, paidBy, splitType, selectedMembers};
+    group.expenses.push(ex); group.updatedAt = Date.now();
+    saveGroup(); closeModal(); showToast("Expense added");
+  };
+
+  qa("[data-del-expense]").forEach(el => el.onclick = () => {
+    if(!confirm("Remove this expense from the ledger?")) return;
+    const id = el.getAttribute("data-del-expense");
+    group.expenses = group.expenses.filter(e=>e.id!==id);
+    group.updatedAt = Date.now();
+    saveGroup(); render();
+  });
+
+  if(q("#copyTextBtn")) q("#copyTextBtn").onclick = async () => {
+    const totals = computeTotals(group);
+    const text = buildReportText(totals);
+    try{
+      await navigator.clipboard.writeText(text);
+      showToast("Details copied as text");
+      hideTextFallback();
+      return;
+    }catch(e){ /* try legacy fallback */ }
+    try{
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.top = "-1000px"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if(ok){ showToast("Details copied as text"); hideTextFallback(); return; }
+    }catch(e2){ /* fall through */ }
+    showTextFallback(text);
+    showToast("Couldn't auto-copy here — select the text below and copy manually");
+  };
+  if(q("#exportBtn")) q("#exportBtn").onclick = () => {
+    const blob = new Blob([JSON.stringify(group, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `aapsi-hisaab-${group.groupName.replace(/\s+/g,"-").toLowerCase()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast("Backup downloaded");
+  };
+  if(q("#importFile")) q("#importFile").onchange = (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const incoming = JSON.parse(reader.result);
+        if(!incoming.members || !incoming.expenses){ showToast("Not a valid backup file"); return; }
+        if(!group.updatedAt || (incoming.updatedAt && incoming.updatedAt > group.updatedAt)){
+          group = incoming; group.id = activeGroupId; saveGroup(); showToast("Backup imported"); render();
+        } else {
+          if(confirm("This backup looks older than your current data. Import anyway?")){
+            group = incoming; group.id = activeGroupId; saveGroup(); showToast("Backup imported"); render();
+          }
+        }
+      } catch(err){ showToast("Couldn't read that file"); }
+    };
+    reader.readAsText(file);
+  };
+}
+
+/* ===================== PWA: icon, manifest, install prompt, offline SW ===================== */
+function drawAppIcon(size){
+  const canvas = document.createElement("canvas");
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const r = size*0.22;
+  ctx.fillStyle = COLORS.deep;
+  ctx.beginPath();
+  ctx.moveTo(r,0); ctx.arcTo(size,0,size,size,r); ctx.arcTo(size,size,0,size,r);
+  ctx.arcTo(0,size,0,0,r); ctx.arcTo(0,0,size,0,r); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = COLORS.gold; ctx.lineWidth = size*0.02;
+  ctx.beginPath(); ctx.arc(size/2,size/2,size*0.32,0,Math.PI*2); ctx.setLineDash([size*0.02,size*0.035]); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = `700 ${Math.round(size*0.42)}px sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("₹", size/2, size*0.54);
+  return canvas.toDataURL("image/png");
+}
+
+function setupPWA(){
+  try{
+    const icon32 = drawAppIcon(32);
+    const icon180 = drawAppIcon(180);
+    const icon192 = drawAppIcon(192);
+    const icon512 = drawAppIcon(512);
+
+    const favicon = document.createElement("link");
+    favicon.rel = "icon"; favicon.href = icon32; document.head.appendChild(favicon);
+
+    const touchIcon = document.createElement("link");
+    touchIcon.rel = "apple-touch-icon"; touchIcon.href = icon180; document.head.appendChild(touchIcon);
+
+    const manifest = {
+      name: "आपसी हिसाब", short_name: "आपसी हिसाब",
+      description: "Split group expenses and contributions — works fully offline.",
+      start_url: ".", scope: ".", display: "standalone",
+      background_color: "#EEF0E4", theme_color: "#16342A",
+      icons: [
+        { src: icon192, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: icon512, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    const manifestLink = document.createElement("link");
+    manifestLink.rel = "manifest";
+    manifestLink.href = URL.createObjectURL(manifestBlob);
+    document.head.appendChild(manifestLink);
+  }catch(e){ /* icon/manifest generation failed — app still works fine without it */ }
+
+  try{
+    if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
+      const swCode = `
+        self.addEventListener("install", e => self.skipWaiting());
+        self.addEventListener("activate", e => self.clients.claim());
+        self.addEventListener("fetch", e => {
+          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+        });
+      `;
+      const swBlob = new Blob([swCode], { type: "application/javascript" });
+      navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+    }
+  }catch(e){ /* offline already works via localStorage; SW is a bonus, not a requirement */ }
+
+  const isStandalone = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;
+  if(isStandalone) return;
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  let deferredPrompt = null;
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    renderInstallBanner(false);
+  });
+  window.addEventListener("appinstalled", () => { hideInstallBanner(); });
+
+  function renderInstallBanner(iosMode){
+    if(sessionStorage_safe_get("installBannerDismissed")) return;
+    const el = document.getElementById("installBanner");
+    if(!el) return;
+    el.style.display = "flex";
+    el.innerHTML = iosMode
+      ? `<span>📲 Add आपसी हिसाब to your Home Screen: tap <strong>Share</strong> → <strong>Add to Home Screen</strong>.</span>
+         <button class="ib-dismiss" id="ibDismiss">✕</button>`
+      : `<span>📲 Install आपसी हिसाब for quick, full-screen access.</span>
+         <span style="display:flex;gap:6px;"><button class="ib-install" id="ibInstall">Install</button><button class="ib-dismiss" id="ibDismiss">✕</button></span>`;
+    const installBtn = document.getElementById("ibInstall");
+    if(installBtn) installBtn.onclick = async () => {
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      hideInstallBanner();
+    };
+    document.getElementById("ibDismiss").onclick = () => {
+      sessionStorage_safe_set("installBannerDismissed", "1");
+      hideInstallBanner();
+    };
+  }
+  function hideInstallBanner(){
+    const el = document.getElementById("installBanner");
+    if(el){ el.style.display = "none"; el.innerHTML = ""; }
+  }
+  function sessionStorage_safe_get(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } }
+  function sessionStorage_safe_set(k,v){ try{ sessionStorage.setItem(k,v); }catch(e){} }
+
+  if(isIOS) setTimeout(() => renderInstallBanner(true), 1200);
+}
+setupPWA();
+
+render();
+</script>
+</body>
+</html>
