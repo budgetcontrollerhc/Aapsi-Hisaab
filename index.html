@@ -484,13 +484,24 @@ function membersTab(totals, isAdmin){
   }).join("");
 
   return `
-    <div class="card note-texture" style="background:var(--deep);padding:16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);">🪙 Pool</div>
-        <div class="serif mono" style="font-size:24px;color:var(--paper);">${fmt(totals.totalPool, group.currency)}</div>
-        <div class="mono" style="font-size:12px;color:#EEF0E488;">${fmt(totals.totalExpenses, group.currency)} spent so far</div>
+    <div class="card note-texture" style="background:var(--deep);padding:16px;margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);">🪙 Pool</div>
+          <div class="serif mono" style="font-size:24px;color:var(--paper);">${fmt(totals.totalPool, group.currency)}</div>
+        </div>
+        <button data-goto-report="1" class="pill" style="border:1px dashed ${settled?'var(--brand)':'var(--gold)'};color:${settled?'#8FD9B6':'var(--gold)'};">${settled?'SETTLED':'OPEN'}</button>
       </div>
-      <div class="pill" style="border:1px dashed ${settled?'var(--brand)':'var(--gold)'};color:${settled?'#8FD9B6':'var(--gold)'};">${settled?'SETTLED':'OPEN'}</div>
+      <div style="display:flex;gap:20px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(238,240,228,0.1);">
+        <div>
+          <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#EEF0E477;">Spent</div>
+          <div class="mono" style="font-size:14px;font-weight:700;color:var(--paper);">${fmt(totals.totalExpenses, group.currency)}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#EEF0E477;">Balance in pool</div>
+          <div class="mono" style="font-size:14px;font-weight:700;color:${(totals.totalPool-totals.totalExpenses)>=0?'#8FD9B6':'var(--gold)'};">${fmt(totals.totalPool-totals.totalExpenses, group.currency)}</div>
+        </div>
+      </div>
     </div>
     <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Members · ${group.members.length}</div>
     <div class="card">${rows}</div>
@@ -509,7 +520,9 @@ function expensesTab(me, isAdmin){
       const payer = group.members.find(m=>m.id===ex.paidBy);
       const cat = CAT[ex.category]||CAT.other;
       const scopeNames = ex.splitType==="all" ? "everyone" : (ex.selectedMembers||[]).map(id=>group.members.find(m=>m.id===id)?.name).filter(Boolean).join(", ");
-      const canDel = isAdmin || ex.addedBy===me.id;
+      const canEdit = isAdmin || ex.addedBy===me.id;
+      const when = new Date(ex.date).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const editedWhen = ex.editedAt ? ` · edited ${new Date(ex.editedAt).toLocaleDateString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}` : '';
       return `<div class="row" style="display:flex;gap:10px;">
         <div class="mono faint" style="font-size:11px;min-width:20px;">${String(sorted.length-i).padStart(2,'0')}</div>
         <div style="flex:1;">
@@ -518,8 +531,9 @@ function expensesTab(me, isAdmin){
             <span class="mono" style="font-weight:700;white-space:nowrap;">${fmt(ex.amount, group.currency)}</span>
           </div>
           <div class="faint" style="font-size:12px;margin-top:2px;">${cat.label} · ${ex.source==='fund' ? 'from group fund' : 'paid by <strong>'+esc(payer?payer.name:'removed')+'</strong>'} · split among ${esc(scopeNames)}</div>
+          <div class="faint" style="font-size:10px;margin-top:3px;">${when}${editedWhen}</div>
         </div>
-        ${canDel ? `<button data-del-expense="${ex.id}" style="background:none;color:var(--faint);">🗑</button>` : ''}
+        ${canEdit ? `<span style="display:flex;gap:8px;flex-shrink:0;"><button data-edit-expense="${ex.id}" style="background:none;color:var(--faint);">✏️</button><button data-del-expense="${ex.id}" style="background:none;color:var(--faint);">🗑</button></span>` : ''}
       </div>`;
     }).join("")}</div>`;
 
@@ -540,6 +554,10 @@ function reportTab(totals){
     return `<tr><td style="font-weight:600;">${esc(r.name)}</td><td class="mono" style="text-align:right;">${fmt(r.contribTotal,group.currency)}</td>
       <td class="mono" style="text-align:right;">${fmt(r.owed,group.currency)}</td><td class="mono" style="font-weight:700;text-align:right;color:${color};">${sign}${fmt(Math.abs(r.balance),group.currency)}</td></tr>`;
   }).join("");
+  const balTotalRow = `<tr style="border-top:2px solid var(--ink);"><td style="font-weight:700;font-size:11px;text-transform:uppercase;color:var(--faint);">Total</td>
+    <td class="mono" style="text-align:right;font-weight:700;">${fmt(totals.rows.reduce((s,r)=>s+r.contribTotal,0), group.currency)}</td>
+    <td class="mono" style="text-align:right;font-weight:700;">${fmt(totals.rows.reduce((s,r)=>s+r.owed,0), group.currency)}</td>
+    <td class="mono" style="text-align:right;font-weight:700;">${fmt(totals.rows.reduce((s,r)=>s+r.balance,0), group.currency)}</td></tr>`;
 
   const settlements = computeSettlements(totals);
   const settleHtml = settlements.length===0
@@ -548,7 +566,11 @@ function reportTab(totals){
         <div class="row" style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:14px;"><strong style="color:var(--brick);">${esc(tx.from)}</strong> <span class="faint">→</span> <strong style="color:var(--brand);">${esc(tx.to)}</strong></span>
           <span class="mono" style="font-weight:700;">${fmt(tx.amount, group.currency)}</span>
-        </div>`).join("")}</div>`;
+        </div>`).join("")}
+        <div class="row" style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--ink);background:var(--paper2);">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--faint);">Total</span>
+          <span class="mono" style="font-weight:700;">${fmt(settlements.reduce((s,tx)=>s+tx.amount,0), group.currency)}</span>
+        </div></div>`;
 
   const expList = [...group.expenses].sort((a,b)=>new Date(a.date)-new Date(b.date));
   const expTableHtml = expList.length===0
@@ -564,21 +586,38 @@ function reportTab(totals){
             <td class="mono" style="text-align:right;white-space:nowrap;">${fmt(ex.amount, group.currency)}</td>
             <td style="text-align:right;font-size:12px;color:var(--faint);white-space:nowrap;">${esc(src)}</td></tr>`;
         }).join("")}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--ink);"><td colspan="2" style="font-weight:700;font-size:11px;text-transform:uppercase;color:var(--faint);">Total</td>
+          <td class="mono" style="text-align:right;font-weight:700;white-space:nowrap;">${fmt(expList.reduce((s,ex)=>s+ex.amount,0), group.currency)}</td><td></td></tr></tfoot>
       </table></div>`;
 
   return `
     <div class="card note-texture" style="background:var(--deep);padding:18px;margin-bottom:16px;position:relative;overflow:hidden;">
-      <div style="position:absolute;right:-6px;top:-6px;width:80px;height:80px;border:2px dashed ${settled?'var(--brand)':'var(--gold)'};border-radius:50%;
+      <button data-scroll-top="1" style="position:absolute;right:-6px;top:-6px;width:80px;height:80px;border:2px dashed ${settled?'var(--brand)':'var(--gold)'};border-radius:50%;
         display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(12deg);font-size:10px;font-weight:700;letter-spacing:.05em;
-        color:${settled?'#8FD9B6':'var(--gold)'};text-align:center;gap:2px;"><span style="font-size:13px;">₹</span>${settled?'SETTLED':'OPEN'}</div>
+        color:${settled?'#8FD9B6':'var(--gold)'};text-align:center;gap:2px;background:none;"><span style="font-size:13px;">₹</span>${settled?'SETTLED':'OPEN'}</button>
       <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);">💵 ${esc(group.groupName)}</div>
       <div class="serif" style="font-size:18px;color:var(--paper);">Settlement report</div>
-      <div class="mono" style="font-size:12px;color:#EEF0E499;margin-top:4px;">${group.members.length} members · ${expList.length} expenses · pool ${fmt(totals.totalPool, group.currency)}</div>
+      <div class="mono" style="font-size:12px;color:#EEF0E499;margin-top:4px;">${group.members.length} members · ${expList.length} expenses</div>
+      <div style="display:flex;gap:20px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(238,240,228,0.1);">
+        <div>
+          <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#EEF0E477;">Pool</div>
+          <div class="mono" style="font-size:14px;font-weight:700;color:var(--paper);">${fmt(totals.totalPool, group.currency)}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#EEF0E477;">Spent</div>
+          <div class="mono" style="font-size:14px;font-weight:700;color:var(--paper);">${fmt(totals.totalExpenses, group.currency)}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#EEF0E477;">Balance</div>
+          <div class="mono" style="font-size:14px;font-weight:700;color:${(totals.totalPool-totals.totalExpenses)>=0?'#8FD9B6':'var(--gold)'};">${fmt(totals.totalPool-totals.totalExpenses, group.currency)}</div>
+        </div>
+      </div>
     </div>
     <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Balances</div>
     <div class="card" style="margin-bottom:16px;"><table>
       <thead><tr><th>Member</th><th style="text-align:right;">Contributed</th><th style="text-align:right;">Share</th><th style="text-align:right;">Balance</th></tr></thead>
       <tbody>${rows}</tbody>
+      <tfoot>${balTotalRow}</tfoot>
     </table></div>
     <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Who Owes Whom</div>
     ${settleHtml}
@@ -676,9 +715,9 @@ async function drawReportCanvas(totals){
   const balRows = totals.rows;
   const expList = [...group.expenses].sort((a,b)=>new Date(a.date)-new Date(b.date));
   const settlements = computeSettlements(totals);
-  const balTableH = headRowH + balRows.length*rowH;
-  const settleTableH = headRowH + Math.max(settlements.length,1)*rowH;
-  const expTableH = headRowH + Math.max(expList.length,1)*rowH;
+  const balTableH = headRowH + (balRows.length+1)*rowH;
+  const settleTableH = headRowH + (Math.max(settlements.length,1) + (settlements.length>0?1:0))*rowH;
+  const expTableH = headRowH + (Math.max(expList.length,1) + (expList.length>0?1:0))*rowH;
   const H = headerH+gap+balTableH+gap+settleTableH+gap+expTableH+bottomPad;
 
   const canvas = document.createElement("canvas");
@@ -738,6 +777,20 @@ async function drawReportCanvas(totals){
     y+=rowH;
   });
 
+  ctx.strokeStyle=COLORS.ink; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(padX,y); ctx.lineTo(W-padX,y); ctx.stroke();
+  {
+    const cy=y+rowH/2+5;
+    ctx.font="700 12px sans-serif"; ctx.textAlign="left"; ctx.fillStyle=COLORS.faint;
+    ctx.fillText("TOTAL", padX, cy);
+    ctx.font="700 14px monospace"; ctx.textAlign="right"; ctx.fillStyle=COLORS.ink;
+    ctx.fillText(fmt(balRows.reduce((s,r)=>s+r.contribTotal,0), group.currency), xA, cy);
+    ctx.fillText(fmt(balRows.reduce((s,r)=>s+r.owed,0), group.currency), xB, cy);
+    ctx.fillText(fmt(balRows.reduce((s,r)=>s+r.balance,0), group.currency), xC, cy);
+    ctx.textAlign="left";
+  }
+  y+=rowH;
+
   y+=gap;
   ctx.fillStyle=COLORS.faint; ctx.font="700 10px sans-serif"; ctx.textAlign="left";
   ctx.fillText("WHO OWES WHOM", padX, y+16);
@@ -768,6 +821,18 @@ async function drawReportCanvas(totals){
       ctx.strokeStyle=COLORS.line; ctx.beginPath(); ctx.moveTo(padX,y+rowH); ctx.lineTo(W-padX,y+rowH); ctx.stroke();
       y+=rowH;
     });
+
+    ctx.strokeStyle=COLORS.ink; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(padX,y); ctx.lineTo(W-padX,y); ctx.stroke();
+    {
+      const cy=y+rowH/2+5;
+      ctx.font="700 12px sans-serif"; ctx.textAlign="left"; ctx.fillStyle=COLORS.faint;
+      ctx.fillText("TOTAL", padX, cy);
+      ctx.font="700 14px monospace"; ctx.textAlign="right"; ctx.fillStyle=COLORS.ink;
+      ctx.fillText(fmt(settlements.reduce((s,tx)=>s+tx.amount,0), group.currency), xC, cy);
+      ctx.textAlign="left";
+    }
+    y+=rowH;
   }
 
   y+=gap;
@@ -800,6 +865,18 @@ async function drawReportCanvas(totals){
       ctx.strokeStyle=COLORS.line; ctx.beginPath(); ctx.moveTo(padX,y+rowH); ctx.lineTo(W-padX,y+rowH); ctx.stroke();
       y+=rowH;
     });
+
+    ctx.strokeStyle=COLORS.ink; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(padX,y); ctx.lineTo(W-padX,y); ctx.stroke();
+    {
+      const cy=y+rowH/2+5;
+      ctx.font="700 12px sans-serif"; ctx.textAlign="left"; ctx.fillStyle=COLORS.faint;
+      ctx.fillText("TOTAL", padX, cy);
+      ctx.font="700 14px monospace"; ctx.textAlign="right"; ctx.fillStyle=COLORS.ink;
+      ctx.fillText(fmt(expList.reduce((s,ex)=>s+ex.amount,0), group.currency), xB, cy);
+      ctx.textAlign="left";
+    }
+    y+=rowH;
   }
   return canvas;
 }
@@ -835,51 +912,62 @@ function showImageError(box){
   if(retryBtn) retryBtn.onclick = () => refreshReportImage(computeTotals(group));
 }
 
-/* ===================== Add-expense modal ===================== */
+/* ===================== Add/Edit-expense modal ===================== */
 let modalHtml = "";
-function openAddExpenseModal(){
+let editingExpenseId = null;
+function openAddExpenseModal(){ editingExpenseId = null; renderExpenseModal(null); }
+function openEditExpenseModal(ex){ editingExpenseId = ex.id; renderExpenseModal(ex); }
+function renderExpenseModal(existing){
+  const isEdit = !!existing;
+  const cat = existing ? existing.category : CATEGORIES[0].id;
+  const isPocket = existing ? existing.source === "pocket" : false;
+  const paidByVal = existing && existing.paidBy ? existing.paidBy : identity.memberId;
+  const isSelected = existing ? existing.splitType === "selected" : false;
+  const selectedSet = existing ? new Set(existing.selectedMembers||[]) : new Set(group.members.map(m=>m.id));
   modalHtml = `
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h2 class="serif" style="margin:0;font-size:20px;">Add an expense</h2>
+        <h2 class="serif" style="margin:0;font-size:20px;">${isEdit ? "Edit expense" : "Add an expense"}</h2>
         <button id="closeModalBtn" style="background:none;font-size:18px;">✕</button>
       </div>
       <div class="field"><label>Category</label>
-        <select id="exCategory">${CATEGORIES.map(c=>`<option value="${c.id}">${c.emoji} ${c.label}</option>`).join("")}</select>
+        <select id="exCategory">${CATEGORIES.map(c=>`<option value="${c.id}" ${c.id===cat?"selected":""}>${c.emoji} ${c.label}</option>`).join("")}</select>
       </div>
-      <div class="field"><label id="descLabel">Description (optional)</label>
-        <input id="exDesc" placeholder='Defaults to category name if left blank'>
+      <div class="field"><label id="descLabel">${cat==="other" ? "Describe the expense" : "Description (optional)"}</label>
+        <input id="exDesc" placeholder='Defaults to category name if left blank' value="${existing ? esc(existing.description) : ""}">
       </div>
       <div class="field"><label>Amount (${group.currency})</label>
-        <input id="exAmount" type="number" placeholder="0.00">
+        <input id="exAmount" type="number" placeholder="0.00" value="${existing ? existing.amount : ""}">
       </div>
       <div class="field"><label>Source of this expense</label>
         <div class="toggle-row">
-          <button class="toggle-btn active" data-source="fund">Group fund</button>
-          <button class="toggle-btn" data-source="pocket">Someone's pocket</button>
+          <button class="toggle-btn ${isPocket?'':'active'}" data-source="fund">Group fund</button>
+          <button class="toggle-btn ${isPocket?'active':''}" data-source="pocket">Someone's pocket</button>
         </div>
-        <p class="faint" id="sourceHint" style="font-size:11px;margin-top:4px;">Paid using money already contributed to the pool — no one's contribution changes.</p>
+        <p class="faint" id="sourceHint" style="font-size:11px;margin-top:4px;">${isPocket
+          ? "Paid directly by a member, outside the pool — it's added to their contribution automatically."
+          : "Paid using money already contributed to the pool — no one's contribution changes."}</p>
       </div>
-      <div class="field" id="paidByField" style="display:none;"><label>Paid by</label>
-        <select id="exPaidBy">${group.members.map(m=>`<option value="${m.id}">${esc(m.name)}${m.id===identity.memberId?' (you)':''}</option>`).join("")}</select>
+      <div class="field" id="paidByField" style="display:${isPocket?'block':'none'};"><label>Paid by</label>
+        <select id="exPaidBy">${group.members.map(m=>`<option value="${m.id}" ${m.id===paidByVal?"selected":""}>${esc(m.name)}${m.id===identity.memberId?' (you)':''}</option>`).join("")}</select>
       </div>
       <div class="field"><label>Split among</label>
         <div class="toggle-row">
-          <button class="toggle-btn active" data-split="all">Everyone</button>
-          <button class="toggle-btn" data-split="selected">Choose people</button>
+          <button class="toggle-btn ${isSelected?'':'active'}" data-split="all">Everyone</button>
+          <button class="toggle-btn ${isSelected?'active':''}" data-split="selected">Choose people</button>
         </div>
-        <div id="selectMembersBox" class="card" style="display:none;padding:4px;direction:ltr;">
+        <div id="selectMembersBox" class="card" style="display:${isSelected?'block':'none'};padding:4px;direction:ltr;">
           ${group.members.map(m=>`<div class="memberRow" data-toggle-member="${m.id}" style="display:grid;grid-template-columns:24px 1fr;align-items:center;width:100%;box-sizing:border-box;column-gap:10px;padding:9px 8px;border-radius:8px;direction:ltr;cursor:pointer;">
-            <input type="checkbox" class="memberCheck" value="${m.id}" checked style="width:16px;height:16px;margin:0;justify-self:start;"><span style="text-align:left;justify-self:start;font-size:14px;line-height:1.3;color:var(--ink);">${esc(m.name)}</span></div>`).join("")}
+            <input type="checkbox" class="memberCheck" value="${m.id}" ${selectedSet.has(m.id)?"checked":""} style="width:16px;height:16px;margin:0;justify-self:start;"><span style="text-align:left;justify-self:start;font-size:14px;line-height:1.3;color:var(--ink);">${esc(m.name)}</span></div>`).join("")}
         </div>
       </div>
-      <button class="btn-primary" id="submitExpenseBtn">Add to ledger</button>
+      <button class="btn-primary" id="submitExpenseBtn">${isEdit ? "Save changes" : "Add to ledger"}</button>
     </div>
   </div>`;
   render();
 }
-function closeModal(){ modalHtml=""; render(); }
+function closeModal(){ modalHtml=""; editingExpenseId=null; render(); }
 
 /* ===================== Event handling (delegated) ===================== */
 function attachHandlers(){
@@ -975,6 +1063,8 @@ function attachHandlers(){
   };
 
   qa("[data-tab]").forEach(el => el.onclick = () => { tab = el.getAttribute("data-tab"); render(); });
+  qa("[data-goto-report]").forEach(el => el.onclick = () => { tab = "report"; render(); });
+  qa("[data-scroll-top]").forEach(el => el.onclick = () => { window.scrollTo({top:0, behavior:'smooth'}); });
 
   if(q("#addMemberBtn")) q("#addMemberBtn").onclick = () => {
     const name = q("#newMemberName").value.trim();
@@ -1101,12 +1191,28 @@ function attachHandlers(){
       if(selectedMembers.length===0){ showToast("Choose at least one person"); return; }
     }
     const paidBy = source==="pocket" ? q("#exPaidBy").value : null;
-    const ex = {id:uid(), date:new Date().toISOString(), addedBy:identity.memberId,
-      category, description: desc || CAT[category].label, amount, source, paidBy, splitType, selectedMembers};
-    group.expenses.push(ex); group.updatedAt = Date.now();
-    saveGroup(); closeModal(); showToast("Expense added");
+    if(editingExpenseId){
+      const canEdit = group.members.find(m=>m.id===group.adminId)?.id===identity.memberId ||
+        (group.expenses.find(e=>e.id===editingExpenseId)||{}).addedBy===identity.memberId;
+      if(!canEdit){ showToast("Only the person who added this can edit it"); return; }
+      group.expenses = group.expenses.map(e => e.id===editingExpenseId
+        ? {...e, category, description: desc || CAT[category].label, amount, source, paidBy, splitType, selectedMembers, editedAt: new Date().toISOString()}
+        : e);
+      group.updatedAt = Date.now();
+      saveGroup(); closeModal(); showToast("Expense updated");
+    } else {
+      const ex = {id:uid(), date:new Date().toISOString(), addedBy:identity.memberId,
+        category, description: desc || CAT[category].label, amount, source, paidBy, splitType, selectedMembers};
+      group.expenses.push(ex); group.updatedAt = Date.now();
+      saveGroup(); closeModal(); showToast("Expense added");
+    }
   };
 
+  qa("[data-edit-expense]").forEach(el => el.onclick = () => {
+    const id = el.getAttribute("data-edit-expense");
+    const ex = group.expenses.find(e=>e.id===id);
+    if(ex) openEditExpenseModal(ex);
+  });
   qa("[data-del-expense]").forEach(el => el.onclick = () => {
     if(!confirm("Remove this expense from the ledger?")) return;
     const id = el.getAttribute("data-del-expense");
