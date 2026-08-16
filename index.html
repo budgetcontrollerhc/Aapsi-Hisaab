@@ -142,6 +142,8 @@ const fmt = (n,cur) => cur + Number(n||0).toFixed(2).replace(/\.00$/,"");
 
 const COLORS = { paper:"#EEF0E4", ink:"#1F2B22", deep:"#16342A", brand:"#2D6A4F", gold:"#C9A227", brick:"#A64B2A", line:"#C7CBB6", faint:"#8B9184" };
 let currentReportCanvas = null;
+let currentReportImgUrl = null;
+let reportMode = "full"; // 'full' | 'settlement' | 'whoOwesWhom' — which report image to generate
 
 let activeGroupId = null;
 let group = null;
@@ -624,10 +626,15 @@ function reportTab(totals){
     <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Expense details</div>
     ${expTableHtml}
     <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Shareable image</div>
+    <select id="reportModeSelect" style="margin-bottom:8px;">
+      <option value="full" ${reportMode==='full'?'selected':''}>Full report (balances + who owes whom + expenses)</option>
+      <option value="settlement" ${reportMode==='settlement'?'selected':''}>Settlement report only (contribution, share, balance)</option>
+      <option value="whoOwesWhom" ${reportMode==='whoOwesWhom'?'selected':''}>Who owes whom only</option>
+    </select>
     <div class="card" id="reportImgBox" style="margin-bottom:8px;border:1px solid var(--line);">
       <div style="padding:40px;text-align:center;" class="faint">Preparing image…</div>
     </div>
-    <p class="faint" style="font-size:11px;text-align:center;margin:0 0 12px;">Press and hold the image above (or right-click on desktop) to save or share it directly.</p>
+    <p class="faint" style="font-size:11px;text-align:center;margin:0 0 12px;">Long-press and hold or right click on image to download</p>
     <button id="copyTextBtn" style="background:none;text-decoration:underline;color:var(--faint);font-size:12px;width:100%;text-align:center;padding:4px;">Copy details as text</button>
     <div id="textFallbackBox"></div>
     <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px;">Backup & sync between devices</div>
@@ -705,10 +712,15 @@ function truncateToWidth(ctx,text,maxWidth){
   while(t.length>1 && ctx.measureText(t+"…").width>maxWidth) t=t.slice(0,-1);
   return t+"…";
 }
-async function drawReportCanvas(totals){
+async function drawReportCanvas(totals, mode){
+  mode = mode || "full";
   try{
     if(document.fonts) await Promise.race([document.fonts.ready, new Promise(res=>setTimeout(res,350))]);
   }catch(e){}
+  const showBalances = mode==="full" || mode==="settlement";
+  const showSettle = mode==="full" || mode==="whoOwesWhom";
+  const showExpenses = mode==="full";
+
   const dpr=2, W=720, padX=28;
   const headerH=118, gap=22, headRowH=28, rowH=36, bottomPad=22;
   const xA=padX+380, xB=padX+500, xC=W-padX;
@@ -718,7 +730,10 @@ async function drawReportCanvas(totals){
   const balTableH = headRowH + (balRows.length+1)*rowH;
   const settleTableH = headRowH + (Math.max(settlements.length,1) + (settlements.length>0?1:0))*rowH;
   const expTableH = headRowH + (Math.max(expList.length,1) + (expList.length>0?1:0))*rowH;
-  const H = headerH+gap+balTableH+gap+settleTableH+gap+expTableH+bottomPad;
+  let H = headerH+bottomPad;
+  if(showBalances) H += gap+balTableH;
+  if(showSettle) H += gap+settleTableH;
+  if(showExpenses) H += gap+expTableH;
 
   const canvas = document.createElement("canvas");
   canvas.width = Math.ceil(W*dpr); canvas.height = Math.ceil(H*dpr);
@@ -729,10 +744,11 @@ async function drawReportCanvas(totals){
   ctx.save(); roundRectPath(ctx,0,0,W,headerH,18); ctx.clip();
   ctx.fillStyle = COLORS.deep; ctx.fillRect(0,0,W,headerH); ctx.restore();
 
+  const modeLabel = mode==="settlement" ? "SETTLEMENT REPORT (BALANCES)" : mode==="whoOwesWhom" ? "WHO OWES WHOM" : "SETTLEMENT REPORT";
   ctx.textAlign="left";
   ctx.fillStyle = COLORS.gold;
   ctx.font = "700 12px sans-serif";
-  ctx.fillText("आपसी हिसाब · SETTLEMENT REPORT", padX, 32);
+  ctx.fillText(`आपसी हिसाब · ${modeLabel}`, padX, 32);
 
   ctx.fillStyle = "#EEF0E4";
   ctx.font = "600 26px Georgia, serif";
@@ -751,7 +767,9 @@ async function drawReportCanvas(totals){
   ctx.fillStyle = settled ? "#8FD9B6" : COLORS.gold;
   ctx.textAlign="center"; ctx.fillText(pillText, pillX+pillW/2, pillY+pillH/2+4); ctx.textAlign="left";
 
-  let y = headerH+gap;
+  let y = headerH;
+  if(showBalances){
+  y += gap;
   ctx.fillStyle=COLORS.faint; ctx.font="700 10px sans-serif";
   ctx.fillText("MEMBER", padX, y+16);
   ctx.textAlign="right";
@@ -790,7 +808,9 @@ async function drawReportCanvas(totals){
     ctx.textAlign="left";
   }
   y+=rowH;
+  } // end showBalances
 
+  if(showSettle){
   y+=gap;
   ctx.fillStyle=COLORS.faint; ctx.font="700 10px sans-serif"; ctx.textAlign="left";
   ctx.fillText("WHO OWES WHOM", padX, y+16);
@@ -834,7 +854,9 @@ async function drawReportCanvas(totals){
     }
     y+=rowH;
   }
+  } // end showSettle
 
+  if(showExpenses){
   y+=gap;
   ctx.fillStyle=COLORS.faint; ctx.font="700 10px sans-serif"; ctx.textAlign="left";
   ctx.fillText("EXPENSE", padX, y+16);
@@ -878,6 +900,7 @@ async function drawReportCanvas(totals){
     }
     y+=rowH;
   }
+  } // end showExpenses
   return canvas;
 }
 
@@ -888,11 +911,12 @@ async function refreshReportImage(totals){
     if(!done && box) showImageError(box);
   }, 6000);
   try{
-    const canvas = await drawReportCanvas(totals);
+    const canvas = await drawReportCanvas(totals, reportMode);
     const dataUrl = canvas.toDataURL("image/png");
     done = true;
     clearTimeout(failTimer);
     currentReportCanvas = canvas;
+    currentReportImgUrl = dataUrl;
     if(box){
       box.innerHTML = `<img id="reportImgEl" src="${dataUrl}" style="width:100%;display:block;" alt="Settlement report">`;
     }
@@ -1221,6 +1245,10 @@ function attachHandlers(){
     saveGroup(); render();
   });
 
+  if(q("#reportModeSelect")) q("#reportModeSelect").onchange = (e) => {
+    reportMode = e.target.value;
+    refreshReportImage(computeTotals(group));
+  };
   if(q("#copyTextBtn")) q("#copyTextBtn").onclick = async () => {
     const totals = computeTotals(group);
     const text = buildReportText(totals);
